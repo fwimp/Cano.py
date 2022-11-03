@@ -95,6 +95,8 @@ output control:
 
 auxiliary commands:
   --citation            print citations and exit
+  --batchtest mincores maxcores repeats burnin?
+                        Perform multicore batch test.
 ```
 
 ### Image file
@@ -206,6 +208,32 @@ For 11* images at 8704x4352px (with no saving of intermediate images), 5 repeats
 |    15 | 20.21s | 0.33s |       36GB       |   1.84s    |
 *(On a 16 core, 32GB system (34% used at runtime))*
 
+<!--
+10 images, 12 core cpu, 32GB RAM
+[('Cores', 'Mean', 'SD', 'Per Iteration'),
+ (11, 45.39016127586365, 0.3136216840479547, 4.126378297805786),
+ (10, 45.06124210357666, 0.599962891979254[('Cores', 'Mean', 'SD', 'Per Iteration'),
+ (11, 45.39016127586365, 0.3136216840479547, 4.126378297805786),
+ (10, 45.06124210357666, 0.5999628919792549, 4.0964765548706055),
+ (9, 46.514020919799805, 0.3658528892397731, 4.2285473563454365),
+ (8, 46.11943984031677, 0.45391745008684536, 4.192676349119707),
+ (7, 47.89242887496948, 0.16153786117986563, 4.3538571704517715),
+ (6, 50.267836014429726, 0.15462913380359417, 4.569803274039066),
+ (5, 49.1807336807251, 0.04553676362310023, 4.470975789156827),
+ (4, 56.13061499595642, 0.6287089882053056, 5.102783181450584),
+ (3, 62.78471310933431, 0.3068632083726964, 5.707701191757665),
+ (2, 78.23151143391927, 0.3397001759015864, 7.111955584901751),
+ (1, 110.38361072540283, 0.07642984673026179, 10.034873702309348)]9, 4.0964765548706055),
+ (9, 46.514020919799805, 0.3658528892397731, 4.2285473563454365),
+ (8, 46.11943984031677, 0.45391745008684536, 4.192676349119707),
+ (7, 47.89242887496948, 0.16153786117986563, 4.3538571704517715),
+ (6, 50.267836014429726, 0.15462913380359417, 4.569803274039066),
+ (5, 49.1807336807251, 0.04553676362310023, 4.470975789156827),
+ (4, 56.13061499595642, 0.6287089882053056, 5.102783181450584),
+ (3, 62.78471310933431, 0.3068632083726964, 5.707701191757665),
+ (2, 78.23151143391927, 0.3397001759015864, 7.111955584901751),
+ (1, 110.38361072540283, 0.07642984673026179, 10.034873702309348)]-->
+
 In general a good rule of thumb is that the number of cores you use should be either equivalent to:
 - The number of images you are processing, *or*
 - The largest (rounded up) whole-number divisor of the number of images within the number of cores you have, *or*
@@ -226,6 +254,15 @@ If you were processing 151 images on a 16 core cpu, you might consider using 8 c
 Enabling debug mode prints a bit more information to the terminal when the program is running.
 
 This is not usually necessary for day-to-day use.
+
+### Batch test
+`--batchtest mincores maxcores repeats burnin?`
+
+Run a speed test between `mincores` and `maxcores`, with `repeats` runs at each core number.
+
+`burnin` does one run at the max number of cores before starting, just to make sure that if memory needs to be shifted to the swap file that is done before the timed runs start.
+
+This function is really just for benchmarking and so is not usually necessary for day-to-day use. 
 
 ### Citations
 `--citation`

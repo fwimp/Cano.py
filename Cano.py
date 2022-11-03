@@ -10,10 +10,12 @@ from tqdm import tqdm
 import multiprocessing
 from pprint import pformat
 import csv
+from distutils.util import strtobool
 
 
 class EmptyDirError(ValueError):
     pass
+
 
 # Custom log formatter
 class CustomFormatter(logging.Formatter):
@@ -207,45 +209,6 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
     else:
         raise ValueError('"mode" argument must be one of "full", "midpoint", or "pickup"')
 
-# # Can probably be removed but keeping for completeness for the moment
-# def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", quiet=False):
-#     # Load image and calculate shape
-#     if quiet:
-#         logger.disabled = True
-#     try:
-#         if mode == "full":
-#             logger.info("Full analysis: %s", imgpath)
-#             logger.debug("    transforming to polar...")
-#             polar = transform_image(imgpath, slicepoint, rotate_deg)
-#             logger.debug("    thresholding and calculating LAI...")
-#             thresh, lai = threshold_and_lai(polar, threshold)
-#
-#             # TODO: Make sure that imsave takes path and names from imgpath
-#             polar = (polar * 255).astype('uint8')
-#             io.imsave("results/polar.jpg", polar)
-#             thresh = (thresh * 255).astype('uint8')
-#             io.imsave("results/thresh.jpg", thresh)
-#             return polar, thresh, lai
-#         elif mode == "midpoint":
-#             # TODO: Make sure this appropriately returns the right stuff
-#             logger.info("Partial analysis: %s", imgpath)
-#             polar = transform_image(imgpath, slicepoint, rotate_deg)
-#             return polar, None, None
-#         elif mode == "pickup":
-#             # TODO: Make sure this appropriately takes and returns the right stuff
-#             # load imgpath
-#             polar = io.imread(imgpath)
-#             logger.info("Pickup (threshold and LAI): %s", imgpath)
-#             thresh, lai = threshold_and_lai(polar, threshold)
-#             return polar, thresh, lai
-#         else:
-#             raise ValueError('"mode" argument must be one of "full", "midpoint", or "pickup"')
-#     except Exception:
-#         # Make sure that logger is re-enabled if anything bad happens before erroring out
-#         # This may behave badly under multiprocessing, so might be worth implementing a seperate version with no logging.
-#         logger.disabled = False
-#         raise
-
 
 def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext=".png"):
     """Batch process multiple images in single-core mode"""
@@ -433,9 +396,19 @@ def main(args):
 
 
 def testbatch(args, coremin=1, coremax=4, repeats=5, burnin=True):
+    if coremin < 1:
+        logger.critical("Minimum cores is fewer than 1!")
+        raise ValueError(f"Minimum cores = {coremin}!")
+    if repeats < 1:
+        logger.critical("Must do at least 1 repeat")
+        raise ValueError(f"Repeats = {repeats}!")
+    elif repeats > 9:
+        logger.warning("Large number of repeats specified %i, this could take a long time!", repeats)
+
     logger.info(f"Starting tests of {repeats} repeats between {coremin} and {coremax} cores")
     from time import time
     coretests = list(range(coremin, coremax+1))
+    coretests.reverse()
 
     processmode = "full"
     if args["midpoint"]:
@@ -450,7 +423,7 @@ def testbatch(args, coremin=1, coremax=4, repeats=5, burnin=True):
     resultsdir = None
 
     if burnin:
-        logger.info(f"Performing memory burnin at {coremax} cores")
+        logger.info(f"Performing memory burnin on {coremax} cores")
         imgpath_out, lai_out = multiprocess_image_batch(
             args["image"],
             threshold=args["threshold"], slicepoint=args["slice"],
@@ -526,11 +499,19 @@ if __name__ == "__main__":
 
     auxgroup = parser.add_argument_group("auxiliary commands")
     auxgroup.add_argument("--citation", action="store_true", help="print citations and exit")
+    auxgroup.add_argument("--batchtest", nargs=4, help="Perform multicore batch test.", metavar=("mincores", "maxcores", "repeats", "burnin?"))
 
     arglist = parser.parse_args()
     arglist = vars(arglist)
-
-    main(arglist)
-
-    # testbatch(arglist, 1, 15, 5, burnin=True)
+    if arglist["batchtest"]:
+        try:
+            burnin = bool(strtobool(arglist["batchtest"].pop(3)))
+            batchnumargs = [int(x) for x in arglist["batchtest"]]
+            logger.info("Test parameters\nCores={}-{}\nRepeats={}\nBurnin={}".format(*batchnumargs, burnin))
+        except ValueError:
+            logger.exception("Unable to convert numerical arguments %s to integers.", str(arglist["batchtest"]))
+            sys.exit(1)
+        testbatch(arglist, *batchnumargs,  burnin=burnin)
+    else:
+        main(arglist)
     sys.exit(0)
