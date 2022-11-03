@@ -208,6 +208,8 @@ For 11* images at 8704x4352px (with no saving of intermediate images), 5 repeats
 |    13 | 19.70s | 0.15s |      31.2GB      |   1.79s    |
 |    14 | 19.48s | 0.17s |      33.6GB      |   1.77s    |
 |    15 | 20.21s | 0.33s |       36GB       |   1.84s    |
+
+
 *(On a 16 core, 32GB system (34% used at runtime))*
 
 <!--
