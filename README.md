@@ -10,8 +10,16 @@ The following guide is intended to provide a relatively comprehensive overview o
 
 ## Environment setup
 Coming soon...
+### Dependencies
+Cano relies on a few non-standard packages to run. These are as follows:
+```
+numpy
+scipy
+scikit-image
+tqdm
+```
 
----
+Please make sure these are installed in your python environment using either `pip` or `conda` depending on your setup.
 
 ## Using the CLI
 Cano is a purely command line program. Whilst this can be intimidating, it is intended to give the maximum flexibility for both users and developers. 
@@ -49,8 +57,6 @@ Finally some options (such as `--no_csv`) do not have a shorthand, in which case
 `Cano.py ./results/polar -dpn --multicore 8 --threshold 0.7 --no_csv`
 
 ## CLI Documentation
-
----
 
 ### Help
 `-h / --help`
@@ -250,8 +256,10 @@ by Francis Windram, Imperial College London
 
 
 ## Known Bugs
+There are a few currently known bugs in Cano.py. If you encounter any, please report them using the [github issues page.](https://github.com/fwimp/Cano.py/issues)
 
 ---
+
 ### Multicore runs are impossible to exit early
 This is definitely a problem, but one with a non-trivial solution, [see here for more details.](https://stackoverflow.com/questions/1408356/keyboard-interrupts-with-pythons-multiprocessing-pool/2561809#2561809)
 
