@@ -1,3 +1,5 @@
+![logo](logo.svg)
+
 # Cano.py Documentation
 
 Welcome to Cano.py (hereafter referred to as Cano), a tool written in Python 3 and scikit-image to automate the projection and analysis of cylindrical canopy images.
