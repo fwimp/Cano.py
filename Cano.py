@@ -217,6 +217,7 @@ def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90
     logger.info(f"Processing the following files:\n{pformat(imagepath_list)}")
     if len(imagepath_list) < 1:
         raise EmptyDirError(f"{imgpath} has no valid files inside it! Are you sure it's the right path?")
+    # Process list of files
     outlist = [process_image_single(x, threshold=threshold, slicepoint=slicepoint, save_files=save_files, mode=mode, outpath=outpath, fileext=fileext) for x in tqdm(imagepath_list, leave=False)]
     imgpaths, lais = zip(*outlist)
     return imgpaths, lais
@@ -295,12 +296,6 @@ def main(args):
         logger.setLevel(logging.DEBUG)
         logger.warning("Running in debug mode...")
         logger.debug("Args: \n%s", pformat(args))
-
-    # Fix threshold and slice arguments if -t/s are provided without a proceeding argument.
-    if args["threshold"] is None:
-        args["threshold"] = 0.82
-    if args["slice"] is None:
-        args["slice"] = 2176
 
     batchmode = False
     # Are we in batch mode? Assume so if "image" is a dir
@@ -483,13 +478,13 @@ if __name__ == "__main__":
     # NOTE: Running in midpoint/pickup mode causes some error in LAI measurements due to colourspace conversions
     # This is not present in full runs, but doing this forgoes the option for manual standardisation.
 
-    parser.add_argument("-c", "--multicore", nargs="?", type=int, const=-1, default=None, help="enable multicore processing", metavar="int")
+    parser.add_argument("-c", "--multicore", nargs="?", type=int, const=-1, help="enable multicore processing", metavar="int")
     parser.add_argument("-d", "--debug", action="store_true", help="enable debugging information")
 
     paramgroup = parser.add_argument_group("processing parameters")
-    paramgroup.add_argument("-t", "--threshold", nargs="?", type=float, default=0.82,
+    paramgroup.add_argument("-t", "--threshold", nargs="?", type=float, const=0.82, default=0.82,
                             help="threshold proportion for LAI calculation (defaults to 0.82)", metavar="flt")
-    paramgroup.add_argument("-s", "--slice", nargs="?", type=int, default=2176,
+    paramgroup.add_argument("-s", "--slice", nargs="?", type=int, const=2176, default=2176,
                             help="slice point for image cropping (defaults to 2176px)", metavar="int")
 
     outgroup = parser.add_argument_group("output control")
