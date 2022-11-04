@@ -166,13 +166,13 @@ def threshold_and_lai(polar, threshold=0.82):
     return thresh, lai
 
 
-def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext=".png"):
+def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png"):
     """Process a single image"""
     filename = os.path.splitext(os.path.basename(imgpath))[0]
     # Note: this command is currently brittle if imported into other python scripts.
     # If save_files is True and outpath is not None, saving will probably fail.
-    polarfile = f"{filename}_polar{fileext}"
-    threshfile = f"{filename}_thresh{fileext}"
+    polarfile = f"{filename}_polar.{fileext}"
+    threshfile = f"{filename}_thresh.{fileext}"
 
     if save_files:
         polarfile = os.path.join(outpath, "polar", polarfile)
@@ -210,7 +210,7 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
         raise ValueError('"mode" argument must be one of "full", "midpoint", or "pickup"')
 
 
-def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext=".png"):
+def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png"):
     """Batch process multiple images in single-core mode"""
     # Add any other extensions here later if necessary
     imagepath_list = [os.path.join(imgpath, file) for file in os.listdir(imgpath) if file.endswith((".jpg", ".JPG", ".jpeg", ".JPEG", ".png"))]
@@ -223,7 +223,7 @@ def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90
     return imgpaths, lais
 
 
-def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext=".png", cores=15):
+def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", cores=15):
     """Batch process multiple images in multi-core mode"""
     # Add any other extensions here later if necessary
     # This mode is much faster when number of files is large! But it is also very intensive.
@@ -359,14 +359,14 @@ def main(args):
                 imgpath_out, lai_out = multiprocess_image_batch(
                     args["image"],
                     threshold=args["threshold"], slicepoint=args["slice"],
-                    mode=processmode, save_files=args["save_files"], outpath=resultsdir,
+                    mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"],
                     cores=args["multicore"]
                 )
             else:
                 imgpath_out, lai_out = process_image_batch(
                     args["image"],
                     threshold=args["threshold"], slicepoint=args["slice"],
-                    mode=processmode, save_files=args["save_files"], outpath=resultsdir
+                    mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"]
                 )
             logger.info(f"Batch processing complete.")
 
@@ -377,7 +377,7 @@ def main(args):
             imgpath_out, lai_out = process_image_single(
                 args["image"],
                 threshold=args["threshold"], slicepoint=args["slice"],
-                mode=processmode, save_files=args["save_files"], outpath=resultsdir
+                mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"]
             )
             if lai_out is not None:
                 logger.info(f"LAI: {lai_out}")
@@ -470,6 +470,7 @@ if __name__ == "__main__":
     # May not be needed, could just detect if "image" is a path to a folder
     # parser.add_argument("-c", "--multicore", action="store_true", help="enable multicore processing")
     parser.add_argument("-o", "--outdir", nargs="?", help="output directory", metavar="d")
+    parser.add_argument("-e", "--extension", nargs="?", help="output file extension", metavar="ext", choices=["png", "jpg"], const="png", default="png")
 
     # Also need args for outputting at midpoint and stopping or from picking up from midpoint.
     midargs = parser.add_mutually_exclusive_group()
@@ -494,7 +495,7 @@ if __name__ == "__main__":
 
     auxgroup = parser.add_argument_group("auxiliary commands")
     auxgroup.add_argument("--citation", action="store_true", help="print citations and exit")
-    auxgroup.add_argument("--batchtest", nargs=4, help="Perform multicore batch test.", metavar=("mincores", "maxcores", "repeats", "burnin?"))
+    auxgroup.add_argument("--batchtest", nargs=4, help="Perform multicore batch test", metavar=("mincores", "maxcores", "repeats", "burnin?"))
 
     arglist = parser.parse_args()
     arglist = vars(arglist)

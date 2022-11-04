@@ -66,8 +66,8 @@ Finally some options (such as `--no_csv`) do not have a shorthand, in which case
 Prints the help file for Cano (as below)
 
 ```
-usage: Cano.py [-h] [-o [d]] [-m | -p] [-c [int]] [-d] [-t [flt]] [-s [int]] [-n] [--no_csv]
-               [--citation]
+usage: Cano.py [-h] [-o [d]] [-e [ext]] [-m | -p] [-c [int]] [-d] [-t [flt]] [-s [int]] [-n]
+               [--no_csv] [--citation] [--batchtest mincores maxcores repeats burnin?]
                image
 
 Transform, threshold, and calculate LAI for panoramic canopy photos.
@@ -78,6 +78,8 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -o [d], --outdir [d]  output directory
+  -e [ext], --extension [ext]
+                        output file extension
   -m, --midpoint        output polar image for standardisation (cannot be combined with -p)
   -p, --pickup          pick up from standardised polar images for thresholding and LAI calculation
                         (cannot be combined with -m)
@@ -127,6 +129,16 @@ If this is not what you want, you can provide an output directory using `-o` whi
 
 `Cano.py image.jpg --outdir ./path/to/results`
 
+### Output file extension
+`-e <EXT> / --extension <EXT>`
+
+You can provide an alternative file extension to `png` using the `-e` flag. Currently the only other option is `jpg`.
+
+In general JPGs are smaller for full-colour images, but they do introduce compression artifacts, degrading the quality of the image.
+
+Unless storage is at an absolute premium, `png` (the default) is usually the best choice.
+
+
 ### Midpoint / Pickup processing
 `-m / --midpoint` or `-p / --pickup`
 
@@ -161,7 +173,7 @@ The slice option controls the distance from the top of the image in pixels to cr
 
 If you have a different setup to the default then this might need to be tuned accordingly using the `-s` option.
 
-### No Intermediate Image Output
+### No intermediate image output
 `-n / --no_output`
 
 By default, Cano saves the intermediate polar projection images to the folder `results/polar/` and the threshold images to `results/thresh/`.
@@ -252,7 +264,7 @@ If you were processing 151 images on a 16 core cpu, you might consider using 8 c
 
 *Smaller images have a significantly lower RAM and processing requirement, so do consider that if you are having problems, but remember to change the `--slice` command appropriately.*
 
-### Debug Mode
+### Debug mode
 `-d / --debug`
 
 Enabling debug mode prints a bit more information to the terminal when the program is running.
@@ -296,7 +308,7 @@ by Francis Windram, Imperial College London
 ```
 
 
-## Known Bugs
+## Known bugs
 There are a few currently known bugs in Cano.py. If you encounter any, please report them using the [github issues page.](https://github.com/fwimp/Cano.py/issues)
 
 ---
