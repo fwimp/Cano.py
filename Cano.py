@@ -467,12 +467,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Transform, threshold, and calculate LAI for panoramic canopy photos.")
     parser.add_argument("image", help="an image to analyse (or folder containing said images)")
 
-    # May not be needed, could just detect if "image" is a path to a folder
-    # parser.add_argument("-c", "--multicore", action="store_true", help="enable multicore processing")
     parser.add_argument("-o", "--outdir", nargs="?", help="output directory", metavar="d")
     parser.add_argument("-e", "--extension", nargs="?", help="output file extension", metavar="ext", choices=["png", "jpg"], const="png", default="png")
 
-    # Also need args for outputting at midpoint and stopping or from picking up from midpoint.
     midargs = parser.add_mutually_exclusive_group()
     midargs.add_argument("-m", "--midpoint", action="store_true", help="output polar image for standardisation (cannot be combined with -p)")
     midargs.add_argument("-p", "--pickup", action="store_true", help="pick up from standardised polar images for thresholding and LAI calculation (cannot be combined with -m)")

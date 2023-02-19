@@ -108,7 +108,12 @@ auxiliary commands:
 
 The image parameter is the only required argument to Cano. In normal operation this is expected to be the file path to the image that you wish to process.
 
-If you would like to process a folder of images, provide that as an argument instead, and Cano.py will intelligently process in batch mode instead.
+If you would like to process a folder of images, provide that as an argument instead, and Cano will intelligently process in batch mode instead.
+
+Cano currently supports the following input file extensions:
+- .jpg
+- .jpeg
+- .png
 
 ### Output directory
 `-o <DIR> / --outdir <DIR>`
@@ -307,6 +312,15 @@ CLI, multiprocessing, optimisation, and extra programming
 by Francis Windram, Imperial College London
 ```
 
+## Examples
+Here are a few examples of commands for running common Cano processes
+
+### Midpoint/Pickup run
+First run `Cano.py ./images -mc`
+
+*then standardise the images in `./results/polar`*
+
+Finally run `Cano.py ./results/polar -pc` 
 
 ## Known bugs
 There are a few currently known bugs in Cano.py. If you encounter any, please report them using the [github issues page.](https://github.com/fwimp/Cano.py/issues)
