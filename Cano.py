@@ -6,7 +6,12 @@ from skimage.transform import rotate, warp
 import numpy as np
 import skimage.io as io
 import argparse
-from tqdm import tqdm
+try:
+    from tqdm import tqdm
+except ImportError:
+    def tqdm(x, *args, **kwargs):
+        # Return transparent tqdm wrapper just to make sure everything works even if tqdm is not installed
+        return x
 import multiprocessing
 from pprint import pformat
 import csv
@@ -41,7 +46,7 @@ class CustomFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-logger = logging.getLogger("lai_finder")
+logger = logging.getLogger("canopy")
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
