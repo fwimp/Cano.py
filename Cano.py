@@ -144,7 +144,9 @@ def calc_lai(gap_fractions, width=6):
 def transform_image(imgpath, slicepoint=2176, rotate_deg=-90):
     """Crop, warp and rotate image"""
     image = io.imread(imgpath)
-    pano = image[:slicepoint, :, :]
+    pano = image
+    if slicepoint is not None:
+        pano = pano[:slicepoint, :, :]
     input_shape = pano.shape
     output_shape = (input_shape[0] * 2, input_shape[0] * 2)
 
@@ -354,6 +356,12 @@ def main(args):
             except FileExistsError:
                 logger.debug("Threshold folder already exists.")
 
+    slicepoint = args["slice"]
+
+    if args["noslice"] is True:
+        logger.info("Slicing disabled.")
+        slicepoint = None
+
     # Do the actual processing!
     try:
         imgpath_out = []
@@ -363,14 +371,14 @@ def main(args):
             if args["multicore"]:
                 imgpath_out, lai_out = multiprocess_image_batch(
                     args["image"],
-                    threshold=args["threshold"], slicepoint=args["slice"],
+                    threshold=args["threshold"], slicepoint=slicepoint,
                     mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"],
                     cores=args["multicore"]
                 )
             else:
                 imgpath_out, lai_out = process_image_batch(
                     args["image"],
-                    threshold=args["threshold"], slicepoint=args["slice"],
+                    threshold=args["threshold"], slicepoint=slicepoint,
                     mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"]
                 )
             logger.info(f"Batch processing complete.")
@@ -381,7 +389,7 @@ def main(args):
             logger.info("Running in single image mode.")
             imgpath_out, lai_out = process_image_single(
                 args["image"],
-                threshold=args["threshold"], slicepoint=args["slice"],
+                threshold=args["threshold"], slicepoint=slicepoint,
                 mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"]
             )
             if lai_out is not None:
@@ -489,6 +497,7 @@ if __name__ == "__main__":
                             help="threshold proportion for LAI calculation (defaults to 0.82)", metavar="flt")
     paramgroup.add_argument("-s", "--slice", nargs="?", type=int, const=2176, default=2176,
                             help="slice point for image cropping (defaults to 2176px)", metavar="int")
+    paramgroup.add_argument("--no_slice", action="store_true", help="do not slice the image before reprojection", dest="noslice")
 
     outgroup = parser.add_argument_group("output control")
     outgroup.add_argument("-n", "--no_output", action="store_false", help="do not store any interim images (quicker)",

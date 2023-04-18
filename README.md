@@ -92,6 +92,7 @@ processing parameters:
                         threshold proportion for LAI calculation (defaults to 0.82)
   -s [int], --slice [int]
                         slice point for image cropping (defaults to 2176px)
+  --no_slice            do not slice the image before reprojection
 
 output control:
   -n, --no_output       do not store any interim images (quicker)
@@ -177,6 +178,11 @@ LAI is sensitive to the threshold value, however, so if you wish to change this,
 The slice option controls the distance from the top of the image in pixels to crop to. By default this is set to 2176px.
 
 If you have a different setup to the default then this might need to be tuned accordingly using the `-s` option.
+
+### No Slice
+`--no_slice`
+
+In the case that images have been pre-cropped into canopy panoramas, no slicing is needed. This flag disables the slicing element of the preprocessor (and ignores the `-s` flag).
 
 ### No intermediate image output
 `-n / --no_output`
