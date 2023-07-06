@@ -149,7 +149,8 @@ def transform_image(imgpath, slicepoint=2176, rotate_deg=-90):
         pano = pano[:slicepoint, :, :]
     input_shape = pano.shape
     output_shape = (input_shape[0] * 2, input_shape[0] * 2)
-
+    # TODO: Possibly pre-calculate warp_coords for images and then use map_coordinates to apply it.
+    # This is not necessarily trivial but could speed everything up by about 22.5% if that's needed
     polar = warp(pano, inverse_map,
                  map_args={"input_shape": input_shape, "output_shape": output_shape},
                  output_shape=output_shape)
@@ -173,7 +174,7 @@ def threshold_and_lai(polar, threshold=0.82):
     return thresh, lai
 
 
-def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png"):
+def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", quality=3):
     """Process a single image"""
     filename = os.path.splitext(os.path.basename(imgpath))[0]
     # Note: this command is currently brittle if imported into other python scripts.
@@ -192,16 +193,22 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
 
         if save_files:
             polar = (polar * 255).astype('uint8')
-            io.imsave(polarfile, polar)
+            io.imsave(polarfile, polar, check_contrast=False,
+                      plugin='pil',
+                      compress_level=quality)
             thresh = (thresh * 255).astype('uint8')
-            io.imsave(threshfile, thresh)
+            io.imsave(threshfile, thresh, check_contrast=False,
+                      plugin='pil',
+                      compress_level=quality)
         return imgpath, lai
 
     elif mode == "midpoint":
         polar = transform_image(imgpath, slicepoint, rotate_deg)
         if save_files:
             polar = (polar * 255).astype('uint8')
-            io.imsave(polarfile, polar)
+            io.imsave(polarfile, polar, check_contrast=False,
+                       plugin='pil',
+                       compress_level=quality)
         return imgpath, None
 
     elif mode == "pickup":
@@ -210,14 +217,16 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
         thresh, lai = threshold_and_lai(polar, threshold)
         if save_files:
             thresh = (thresh * 255).astype('uint8')
-            io.imsave(threshfile, thresh)
+            io.imsave(threshfile, thresh, check_contrast=False,
+                      plugin='pil',
+                      compress_level=quality)
         return imgpath, lai
 
     else:
         raise ValueError('"mode" argument must be one of "full", "midpoint", or "pickup"')
 
 
-def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png"):
+def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", quality=3):
     """Batch process multiple images in single-core mode"""
     # Add any other extensions here later if necessary
     imagepath_list = [os.path.join(imgpath, file) for file in os.listdir(imgpath) if file.endswith((".jpg", ".JPG", ".jpeg", ".JPEG", ".png"))]
@@ -225,12 +234,12 @@ def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90
     if len(imagepath_list) < 1:
         raise EmptyDirError(f"{imgpath} has no valid files inside it! Are you sure it's the right path?")
     # Process list of files
-    outlist = [process_image_single(x, threshold=threshold, slicepoint=slicepoint, save_files=save_files, mode=mode, outpath=outpath, fileext=fileext) for x in tqdm(imagepath_list, leave=False)]
+    outlist = [process_image_single(x, threshold=threshold, slicepoint=slicepoint, save_files=save_files, mode=mode, outpath=outpath, fileext=fileext, quality=quality) for x in tqdm(imagepath_list, leave=False)]
     imgpaths, lais = zip(*outlist)
     return imgpaths, lais
 
 
-def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", cores=15):
+def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", quality=3, cores=15):
     """Batch process multiple images in multi-core mode"""
     # Add any other extensions here later if necessary
     # This mode is much faster when number of files is large! But it is also very intensive.
@@ -250,7 +259,7 @@ def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_de
     imagepath_list = [os.path.join(imgpath, file) for file in os.listdir(imgpath) if file.endswith((".jpg", ".JPG", ".jpeg", ".JPEG", ".png"))]
 
     # Construct args for starmap
-    var_list = [[x, threshold, slicepoint, rotate_deg, mode, save_files, outpath, fileext] for x in imagepath_list]
+    var_list = [[x, threshold, slicepoint, rotate_deg, mode, save_files, outpath, fileext, quality] for x in imagepath_list]
     logger.info(f"Multiprocessing the following files:\n{pformat(imagepath_list)}\non \033[93m{cpus} cores")
     if len(imagepath_list) < 1:
         raise EmptyDirError(f"{imgpath} has no valid files inside it! Are you sure it's the right path?")
@@ -373,13 +382,13 @@ def main(args):
                     args["image"],
                     threshold=args["threshold"], slicepoint=slicepoint,
                     mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"],
-                    cores=args["multicore"]
+                    quality=args["quality"], cores=args["multicore"]
                 )
             else:
                 imgpath_out, lai_out = process_image_batch(
                     args["image"],
                     threshold=args["threshold"], slicepoint=slicepoint,
-                    mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"]
+                    mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"], quality=args["quality"]
                 )
             logger.info(f"Batch processing complete.")
 
@@ -390,7 +399,7 @@ def main(args):
             imgpath_out, lai_out = process_image_single(
                 args["image"],
                 threshold=args["threshold"], slicepoint=slicepoint,
-                mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"]
+                mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"], quality=args["quality"]
             )
             if lai_out is not None:
                 logger.info(f"LAI: {lai_out}")
@@ -482,6 +491,9 @@ if __name__ == "__main__":
 
     parser.add_argument("-o", "--outdir", nargs="?", help="output directory", metavar="d")
     parser.add_argument("-e", "--extension", nargs="?", help="output file extension", metavar="ext", choices=["png", "jpg"], const="png", default="png")
+    parser.add_argument("-q", "--quality", nargs="?", type=int, const=3, default=3, choices=range(0, 10),
+                         help="png compression level. Higher numbers give smaller pngs but slow down image export significantly.",
+                         metavar="int")
 
     midargs = parser.add_mutually_exclusive_group()
     midargs.add_argument("-m", "--midpoint", action="store_true", help="output polar image for standardisation (cannot be combined with -p)")

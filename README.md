@@ -66,7 +66,7 @@ Finally some options (such as `--no_csv`) do not have a shorthand, in which case
 Prints the help file for Cano (as below)
 
 ```
-usage: Cano.py [-h] [-o [d]] [-e [ext]] [-m | -p] [-c [int]] [-d] [-t [flt]] [-s [int]] [-n]
+usage: Cano.py [-h] [-o [d]] [-e [ext]] [-q [int]] [-m | -p] [-c [int]] [-d] [-t [flt]] [-s [int]] [-n]
                [--no_csv] [--citation] [--batchtest mincores maxcores repeats burnin?]
                image
 
@@ -80,6 +80,8 @@ optional arguments:
   -o [d], --outdir [d]  output directory
   -e [ext], --extension [ext]
                         output file extension
+  -q [int], --quality [int]
+                        png compression level. Higher numbers give smaller pngs but slow down image export significantly.
   -m, --midpoint        output polar image for standardisation (cannot be combined with -p)
   -p, --pickup          pick up from standardised polar images for thresholding and LAI calculation
                         (cannot be combined with -m)
@@ -144,6 +146,15 @@ In general JPGs are smaller for full-colour images, but they do introduce compre
 
 Unless storage is at an absolute premium, `png` (the default) is usually the best choice.
 
+### Output file compression
+`-q <int> / --quality <int>`
+
+If you are using `png` files to store your images, this controls the compression level of those png files.
+
+A lower quality value gives *less* compression, resulting in larger output files, but much quicker execution.
+This argument defaults to **3**, but can take any number between 0 (no compression) and 9 (heavy compression) inclusive.
+
+**No data is lost by using lower quality values, only storage space.**
 
 ### Midpoint / Pickup processing
 `-m / --midpoint` or `-p / --pickup`
