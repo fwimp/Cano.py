@@ -124,6 +124,17 @@ def calc_gap_fractions(im_segment, circ_params):
     return np.array(gap_fractions) / 360.0
 
 
+def calc_openness(gap_fractions):
+    """Calculate openness as in Hemiphot.R"""
+    deg2rad = np.pi / 180.0
+    a = deg2rad * np.arange(1, 90)  # 90 degree arc in rads
+    d05 = deg2rad * 0.5     # 0.5 degrees in rads
+    atot = np.sin(a[88] + d05) - np.sin(a[0] - d05) # Delta in sin(arc) across the whole arc (-1 degree)
+    aa = np.sin(a + d05) - np.sin(a - d05)      # Calc sin(arc) across every degree
+    openness = np.sum(gap_fractions * aa / atot)
+    return openness
+
+
 def calc_lai(gap_fractions, width=6):
     """Calculate LAI as in Hemiphot.R"""
     # angles of LAI2000
@@ -160,8 +171,8 @@ def transform_image(imgpath, slicepoint=2176, rotate_deg=-90):
     return polar
 
 
-def threshold_and_lai(polar, threshold=0.82):
-    """Threshold image and calculate LAI"""
+def threshold_and_analyse(polar, threshold=0.82):
+    """Threshold image and analyse"""
     # Threshold image
     cx, cy, cr = image2hemiphot(polar)
     blue = polar[:, :, 2]  # Use blue channel as in Hemispherical_2.0
@@ -170,8 +181,9 @@ def threshold_and_lai(polar, threshold=0.82):
     # Calculate LAI
     gap_fractions = calc_gap_fractions(thresh, (cx, cy, cr))
     lai = calc_lai(gap_fractions)
+    openness = calc_openness(gap_fractions)
 
-    return thresh, lai
+    return thresh, lai, openness
 
 
 def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", quality=3):
@@ -189,7 +201,7 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
     # Process
     if mode == "full":
         polar = transform_image(imgpath, slicepoint, rotate_deg)
-        thresh, lai = threshold_and_lai(polar, threshold)
+        thresh, lai, openness = threshold_and_analyse(polar, threshold)
 
         if save_files:
             polar = (polar * 255).astype('uint8')
@@ -200,7 +212,7 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
             io.imsave(threshfile, thresh, check_contrast=False,
                       plugin='pil',
                       compress_level=quality)
-        return imgpath, lai
+        return imgpath, lai, openness
 
     elif mode == "midpoint":
         polar = transform_image(imgpath, slicepoint, rotate_deg)
@@ -209,18 +221,18 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
             io.imsave(polarfile, polar, check_contrast=False,
                        plugin='pil',
                        compress_level=quality)
-        return imgpath, None
+        return imgpath, None, openness
 
     elif mode == "pickup":
         # load imgpath
         polar = io.imread(imgpath) / 255.0
-        thresh, lai = threshold_and_lai(polar, threshold)
+        thresh, lai, openness = threshold_and_analyse(polar, threshold)
         if save_files:
             thresh = (thresh * 255).astype('uint8')
             io.imsave(threshfile, thresh, check_contrast=False,
                       plugin='pil',
                       compress_level=quality)
-        return imgpath, lai
+        return imgpath, lai, openness
 
     else:
         raise ValueError('"mode" argument must be one of "full", "midpoint", or "pickup"')
@@ -235,8 +247,8 @@ def process_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90
         raise EmptyDirError(f"{imgpath} has no valid files inside it! Are you sure it's the right path?")
     # Process list of files
     outlist = [process_image_single(x, threshold=threshold, slicepoint=slicepoint, save_files=save_files, mode=mode, outpath=outpath, fileext=fileext, quality=quality) for x in tqdm(imagepath_list, leave=False)]
-    imgpaths, lais = zip(*outlist)
-    return imgpaths, lais
+    imgpaths, lais, openness = zip(*outlist)
+    return imgpaths, lais, openness
 
 
 def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-90, mode="full", save_files=False, outpath=None, fileext="png", quality=3, cores=15):
@@ -275,18 +287,18 @@ def multiprocess_image_batch(imgpath, threshold=0.82, slicepoint=2176, rotate_de
             logger.warning("Attempting to exit multicore run...")
             p.terminate()
 
-    imgpaths, lais = zip(*outlist)
-    return imgpaths, lais
+    imgpaths, lais, openness = zip(*outlist)
+    return imgpaths, lais, openness
 
 
-def write_results_csv(imgpaths, lais, outpath):
+def write_results_csv(imgpaths, lais, openness, outpath):
     """Construct, format, and write results.csv"""
     logger.info(f"Writing data to {os.path.join(outpath, 'results.csv')}")
     uids = list(range(1, len(imgpaths)+1))
     imgnames = [os.path.basename(image) for image in imgpaths]
     imgpaths = [os.path.abspath(image) for image in imgpaths]
-    contents = list(zip(uids, imgnames, imgpaths, lais))
-    contents[:0] = [("uid", "image_name", "image_path", "lai")]
+    contents = list(zip(uids, imgnames, imgpaths, lais, openness))
+    contents[:0] = [("uid", "image_name", "image_path", "lai", "openness")]
     with open(os.path.join(outpath, "results.csv"), "w", newline='') as f:
         csvwriter = csv.writer(f)
         csvwriter.writerows(contents)
@@ -378,14 +390,14 @@ def main(args):
         if batchmode:
             logger.info("Running in batch mode.")
             if args["multicore"]:
-                imgpath_out, lai_out = multiprocess_image_batch(
+                imgpath_out, lai_out, openness_out = multiprocess_image_batch(
                     args["image"],
                     threshold=args["threshold"], slicepoint=slicepoint,
                     mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"],
                     quality=args["quality"], cores=args["multicore"]
                 )
             else:
-                imgpath_out, lai_out = process_image_batch(
+                imgpath_out, lai_out, openness_out = process_image_batch(
                     args["image"],
                     threshold=args["threshold"], slicepoint=slicepoint,
                     mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"], quality=args["quality"]
@@ -393,16 +405,18 @@ def main(args):
             logger.info(f"Batch processing complete.")
 
             if args["save_csv"] and processmode != "midpoint":
-                write_results_csv(imgpath_out, lai_out, resultsdir)
+                write_results_csv(imgpath_out, lai_out, openness_out, resultsdir)
         else:
             logger.info("Running in single image mode.")
-            imgpath_out, lai_out = process_image_single(
+            imgpath_out, lai_out, openness_out = process_image_single(
                 args["image"],
                 threshold=args["threshold"], slicepoint=slicepoint,
                 mode=processmode, save_files=args["save_files"], outpath=resultsdir, fileext=args["extension"], quality=args["quality"]
             )
             if lai_out is not None:
                 logger.info(f"LAI: {lai_out}")
+            if openness_out is not None:
+                logger.info(f"Openness: {openness_out}")
         logger.info(f"Image processing complete.")
     except KeyboardInterrupt:
         print()
@@ -441,7 +455,7 @@ def testbatch(args, coremin=1, coremax=4, repeats=5, burnin=True):
 
     if burnin:
         logger.info(f"Performing memory burnin on {coremax} cores")
-        imgpath_out, lai_out = multiprocess_image_batch(
+        imgpath_out, lai_out, openness_out = multiprocess_image_batch(
             args["image"],
             threshold=args["threshold"], slicepoint=args["slice"],
             mode=processmode, save_files=False, outpath=resultsdir,
@@ -486,7 +500,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # Parse arguments appropriately
-    parser = argparse.ArgumentParser(description="Transform, threshold, and calculate LAI for panoramic canopy photos.")
+    parser = argparse.ArgumentParser(description="Transform, threshold, and calculate LAI and openness for panoramic canopy photos.")
     parser.add_argument("image", help="an image to analyse (or folder containing said images)")
 
     parser.add_argument("-o", "--outdir", nargs="?", help="output directory", metavar="d")
@@ -497,7 +511,7 @@ if __name__ == "__main__":
 
     midargs = parser.add_mutually_exclusive_group()
     midargs.add_argument("-m", "--midpoint", action="store_true", help="output polar image for standardisation (cannot be combined with -p)")
-    midargs.add_argument("-p", "--pickup", action="store_true", help="pick up from standardised polar images for thresholding and LAI calculation (cannot be combined with -m)")
+    midargs.add_argument("-p", "--pickup", action="store_true", help="pick up from standardised polar images for thresholding and analysis (cannot be combined with -m)")
     # NOTE: Running in midpoint/pickup mode causes some error in LAI measurements due to colourspace conversions
     # This is not present in full runs, but doing this forgoes the option for manual standardisation.
 
