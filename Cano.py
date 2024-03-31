@@ -221,7 +221,7 @@ def process_image_single(imgpath, threshold=0.82, slicepoint=2176, rotate_deg=-9
             io.imsave(polarfile, polar, check_contrast=False,
                        plugin='pil',
                        compress_level=quality)
-        return imgpath, None, openness
+        return imgpath, None, None
 
     elif mode == "pickup":
         # load imgpath
